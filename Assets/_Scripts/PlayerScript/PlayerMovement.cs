@@ -23,36 +23,30 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         // --- LOGIKA 1: INPUT KEYBOARD (WASD) ---
-        float moveX = Input.GetAxisRaw("Horizontal"); // A / D
-        float moveZ = Input.GetAxisRaw("Vertical");   // W / S
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveZ = Input.GetAxisRaw("Vertical");
 
-        // Kalau ada tombol WASD yang ditekan...
         if (moveX != 0 || moveZ != 0)
         {
-            // 1. PENTING: Reset path/tujuan mouse sebelumnya biar gak berebut
             agent.ResetPath();
-
-            // 2. Hitung arah gerak
             Vector3 moveDir = new Vector3(moveX, 0, moveZ).normalized;
-
-            // 3. Gerakkan Agent pakai Velocity (bukan Transform) biar tetep patuh sama NavMesh
-            // (Jadi gak bakal nembus tembok)
             agent.velocity = moveDir * moveSpeed;
 
-            // 4. Putar badan karakter sesuai arah jalan
             if (moveDir != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(moveDir);
             }
         }
 
-        // --- LOGIKA 2: INPUT MOUSE (KLIK) ---
-        // Cuma bisa klik kalau WASD lagi gak dipencet (biar gak bingung)
-        else if (Input.GetMouseButton(0))
+        // --- LOGIKA 2: INPUT MOUSE (KLIK KANAN) ---
+        // Ganti (0) jadi (1)
+        else if (Input.GetMouseButton(1))
         {
             Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
+            // Kita tambahkan LayerMask biar klik kanan cuma nempel di TANAH (bukan di musuh)
+            // Ini biar kalau klik kanan musuh, dia gak jalan nembus musuh
             if (Physics.Raycast(ray, out hit))
             {
                 agent.SetDestination(hit.point);
