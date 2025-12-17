@@ -6,6 +6,7 @@ public class PlayerCombat : MonoBehaviour
     public Transform attackPoint; // Titik tengah ayunan pedang
     public LayerMask enemyLayers; // Biar kita cuma nyerang Musuh (bukan Teman/Tanah)
     private CharacterStats myStats; // Ambil stats diri sendiri
+    public ParticleSystem slashEffect;
 
     [Header("Settings")]
     public float attackRange = 1.5f; // Jangkauan pedang
@@ -33,6 +34,10 @@ public class PlayerCombat : MonoBehaviour
 
     void Attack()
     {
+        if (slashEffect != null)
+        {
+            slashEffect.Play();
+        }
         // 1. Play Animation (Nanti diisi pas udah ada animasi)
         Debug.Log("Hiyyaaa! (Menghempaskan Pedang)");
 
