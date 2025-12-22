@@ -1,83 +1,102 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerCombat : MonoBehaviour
 {
     [Header("References")]
-    public Transform attackPoint; // Titik tengah ayunan pedang
-    public LayerMask enemyLayers; // Biar kita cuma nyerang Musuh (bukan Teman/Tanah)
-    private CharacterStats myStats; // Ambil stats diri sendiri
-    public ParticleSystem slashEffect;
+    public Transform attackPoint;
+    public LayerMask enemyLayers;
+    public GameObject slashSpriteGameObject;
 
-    [Header("Settings")]
-    public float attackRange = 1.5f; // Jangkauan pedang
-    public float attackCooldown = 0.5f; // Jeda antar serangan
+    private SpriteRenderer slashRenderer;
+
+    // Kita simpan settingan awal yang sudah kamu atur di Inspector
+    private Vector3 originalScale;
+    private Quaternion originalRotation;
+
+    [Header("Combat Settings")]
+    public int baseDamage = 10;
+    public float attackRange = 1.5f;
+    public float attackCooldown = 0.5f;
     private float lastAttackTime = 0f;
+
+    [Header("VFX Settings")]
+    public float vfxDuration = 0.2f;
+    // Scale Factor: Seberapa besar dia membesar? (1.5 artinya 1.5x lipat dari ukuran asli)
+    public float scaleMultiplier = 1.5f;
 
     void Start()
     {
-        myStats = GetComponent<CharacterStats>();
+        if (slashSpriteGameObject != null)
+        {
+            slashRenderer = slashSpriteGameObject.GetComponent<SpriteRenderer>();
+
+            // SIMPAN POSISI & ROTASI "SEMPURNA" YANG KAMU BUAT TADI
+            originalScale = slashSpriteGameObject.transform.localScale;
+            originalRotation = slashSpriteGameObject.transform.localRotation;
+
+            slashSpriteGameObject.SetActive(false);
+        }
     }
 
     void Update()
     {
-        // Ganti 'KeyCode.Space' jadi 'MouseButtonDown(0)' (Klik Kiri)
-        // 0 = Kiri, 1 = Kanan, 2 = Tengah
         if (Input.GetMouseButtonDown(0))
         {
             if (Time.time >= lastAttackTime + attackCooldown)
             {
-                Attack();
+                StartCoroutine(AttackRoutine());
                 lastAttackTime = Time.time;
             }
         }
     }
 
-    void Attack()
+    IEnumerator AttackRoutine()
     {
-        if (slashEffect != null)
-        {
-            slashEffect.Play();
-        }
-        // 1. Play Animation (Nanti diisi pas udah ada animasi)
-        Debug.Log("Hiyyaaa! (Menghempaskan Pedang)");
-
-        // 2. Deteksi musuh di dalam lingkaran area (Hitbox)
+        // 1. DAMAGE 
         Collider[] hitEnemies = Physics.OverlapSphere(attackPoint.position, attackRange, enemyLayers);
-
-        // 3. Proses Damage ke setiap musuh yang kena
         foreach (Collider enemy in hitEnemies)
         {
-            // Ambil script stats si musuh
             CharacterStats enemyStats = enemy.GetComponent<CharacterStats>();
-
-            if (enemyStats != null)
-            {
-                // HITUNG DAMAGE (ATK + CRIT)
-                int finalDamage = CalculateDamage();
-
-                // Kirim damage ke musuh
-                enemyStats.TakeDamage(finalDamage);
-            }
+            if (enemyStats != null) enemyStats.TakeDamage(baseDamage);
         }
-    }
 
-    // Rumus hitung output damage kita sendiri
-    int CalculateDamage()
-    {
-        int damageToSend = myStats.baseAttack;
-
-        // Cek Peluang Critical (Roll Dadu 0-100)
-        float randomVal = Random.Range(0f, 100f);
-        if (randomVal < myStats.critRate)
+        // 2. VISUAL EFEK
+        if (slashSpriteGameObject != null && slashRenderer != null)
         {
-            Debug.Log("CRITICAL HIT! 🔥");
-            damageToSend = Mathf.RoundToInt(damageToSend * myStats.critDamageMultiplier);
-        }
+            slashSpriteGameObject.SetActive(true);
 
-        return damageToSend;
+            // RESET ke kondisi awal (sesuai settingan Inspector kamu)
+            slashSpriteGameObject.transform.localScale = originalScale;
+            slashSpriteGameObject.transform.localRotation = originalRotation; // PENTING: Balik ke rotasi setup awal
+
+            // Reset Warna
+            Color currentColor = slashRenderer.color;
+            currentColor.a = 1f;
+            slashRenderer.color = currentColor;
+
+            Vector3 targetScale = originalScale * scaleMultiplier;
+
+            float timer = 0f;
+            while (timer < vfxDuration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / vfxDuration;
+
+                // Animasi Membesar
+                slashSpriteGameObject.transform.localScale = Vector3.Lerp(originalScale, targetScale, t);
+
+                // Animasi Menghilang (Fade Out)
+                currentColor.a = Mathf.Lerp(1f, 0f, t);
+                slashRenderer.color = currentColor;
+
+                yield return null;
+            }
+
+            slashSpriteGameObject.SetActive(false);
+        }
     }
 
-    // Fitur Debug: Biar kita bisa lihat lingkaran jangkauan pedang di Editor
     void OnDrawGizmosSelected()
     {
         if (attackPoint == null) return;
